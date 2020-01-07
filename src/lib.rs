@@ -1,3 +1,32 @@
+/*!
+Simple functions intended to use in __Rust__ `build.rs` scripts for tasks which related to fetching from _HTTP_ and unrolling `.tar.gz` archives with precompiled binaries and etc.
+
+```
+use fetch_unroll::{
+    Config,
+    fetch_unroll,
+};
+
+let pack_url = format!(
+    "{base}/{user}/{repo}/releases/download/{ver}/{pkg}_{prof}.tar.gz",
+    base = "https://github.com",
+    user = "katyo",
+    repo = "oboe-rs",
+    pkg = "liboboe-ext",
+    ver = "0.1.0",
+    prof = "release",
+);
+
+let dest_dir = "target/test_download";
+
+// Creating destination directory
+std::fs::create_dir_all(dest_dir).unwrap();
+
+// Fetching and unrolling archive
+fetch_unroll(pack_url, dest_dir, Config::default()).unwrap();
+```
+ */
+
 use std::{
     path::Path,
     io::{Error as IoError, Cursor, Read},
@@ -24,9 +53,16 @@ pub type Status = Result<()>;
 /// Error type
 #[derive(Debug)]
 pub enum Error {
+    /// Generic HTTP error
     Http(HttpError),
+
+    /// Generic IO error
     Io(IoError),
+
+    /// Redirect error
     Redirect(String),
+
+    /// Invalid response status
     Status(&'static str),
 }
 
@@ -83,6 +119,7 @@ impl From<String> for Error {
 
 /// Configuration options
 pub struct Config {
+    /// The maximum number of redirects
     pub redirect_limit: usize,
 }
 
@@ -155,15 +192,4 @@ pub fn unroll<S: Read, D: AsRef<Path>>(pack: S, path: D) -> Status {
     let mut extractor = Archive::new(unpacker);
 
     extractor.unpack(path).map_err(Error::from)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn tar_gz_from_https() {
-        std::fs::create_dir_all("target/test_download").unwrap();
-        fetch_unroll("https://github.com/katyo/oboe-rs/releases/download/0.1.0/oboe-sys_0.1.0_release.tar.gz", "target/test_download", Config::default()).unwrap();
-    }
 }
