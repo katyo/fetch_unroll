@@ -6,6 +6,7 @@ categories = ["development-tools::build-utils", "web-programming::http-client"]
 keywords = ["fetch", "unroll", "http", "tar", "gzip"]
 authors = ["K. <kayo@illumium.org>"]
 license = "Apache-2.0"
+readme = "README.md"
 repository = "https://github.com/katyo/fetch_unroll"
 edition = "2018"
 
