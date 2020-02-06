@@ -1,14 +1,25 @@
 language: rust
 rust:
-  - stable
-  - beta
-  - nightly
-matrix:
-  allow_failures:
-    - rust: nightly
+- stable
+- beta
+- nightly
 os:
-  - linux
-  - osx
-  - windows
-script:
-  - cargo test
+- linux
+- osx
+- windows
+cache: cargo
+jobs:
+  include:
+  - stage: publish
+    rust: stable
+    os: linux
+    deploy:
+      provider: cargo
+      token:
+        secure: i5dAuAoPvcWcx7i8FLYQvA1HXQBdTfkUHCcQuo3qqY4KLoPJq/d4TOc+iGm8La0PdMNgC24RhNQVIXLOSplqkX2KOrf8pWlh+tjUeQymxf215YVNjhVmIsziOBFQOHDXdEx7ERBGFhtIjmXAAxN7C0SboMsqJzUGXjaTuNHz3BCOQ/fK9wBX9GV80SUwOCkJ5YdVoXm6rCGtD2JOse5ga0ZC60n8bhqEnZ2zsAD8PcwNAEAmoRBcMIuiBiWVIKNAnQG9y05umWldT+bBtE/jBkSfDEWUGPEy7W4KcxO5On17GXFdw5EmFfzFZh2/jMhS+iNxHu5806MqLC4WI1ADOJzRvaSWdynEBzHJNpc7gsIj1WHAZLjbsLjwB9gBn5y48r+9LvDYCG0Dco5x6qHXPW/U9hCzeeo3zRPEOsS6Xk7k2ahoboRY4Sg0/s30oDw6C55IDz686E4oiL0Js3lSEJo1zMEarsjXslk2ToVTqXOSNWucyumh5JyLV1G4Ce6jl1CmIGRpLtbHyJKUIpxRdekoF6pCK4YY+bw7whr9mHQqX3hEjCD9Wl1l4dzvhpj/OFfNj4UaIgodUrHze46FdhVMIlG0sWsdVbys+c1SLxp3p6T8gxE0dF+y9h3pZm1D1LM9THAH+tL4dwqQgGV8VdQQBkDtc2WMv9pfc+rRagE=
+      on:
+        branch: master
+        tags: true
+  allow_failures:
+  - rust: nightly
+  fast_finish: true
