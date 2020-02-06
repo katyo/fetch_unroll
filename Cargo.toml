@@ -12,14 +12,19 @@ edition = "2018"
 
 [badges]
 maintenance = { status = "passively-maintained" }
+travis-ci = { repository = "katyo/fetch_unroll" }
 
 [dependencies.http_req]
 version = "0.5"
 default-features = false
-features = ["rust-tls"]
 
 [dependencies.libflate]
 version = "0.1"
 
 [dependencies.tar]
 version = "0.4"
+
+[features]
+default = ["native-tls"]
+native-tls = ["http_req/native-tls"]
+rust-tls = ["http_req/rust-tls"]

@@ -6,6 +6,11 @@
 
 Simple functions intended to use in __Rust__ `build.rs` scripts for tasks which related to fetching from _HTTP_ and unrolling `.tar.gz` archives with precompiled binaries and etc.
 
+## Features
+
+* __native-tls__ Use native-tls for HTTPS (by default)
+* __rust-tls__ Use rusttls for HTTPS
+
 ## Usage example
 
 ```rust
