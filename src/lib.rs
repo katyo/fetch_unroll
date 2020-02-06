@@ -193,3 +193,29 @@ pub fn unroll<S: Read, D: AsRef<Path>>(pack: S, path: D) -> Status {
 
     extractor.unpack(path).map_err(Error::from)
 }
+
+#[cfg(test)]
+mod test {
+    use super::{fetch_unroll, Config};
+
+    #[test]
+    fn github_archive() {
+        let src_url = format!(
+            "{base}/{user}/{repo}/archive/{ver}.tar.gz",
+            base = "https://github.com",
+            user = "katyo",
+            repo = "fluidlite",
+            ver = "1.2.0",
+        );
+
+        let dst_dir = "target/test_archive";
+
+        // Creating destination directory
+        std::fs::create_dir_all(dst_dir).unwrap();
+
+        // Fetching and unrolling archive
+        fetch_unroll(src_url, dst_dir, Config::default()).unwrap();
+
+        //std::fs::remove_dir_all(dst_dir).unwrap();
+    }
+}
