@@ -9,6 +9,6 @@ matrix:
 os:
   - linux
   - osx
+  - windows
 script:
   - cargo test
-  - cargo test --features rust-tls --no-default-features

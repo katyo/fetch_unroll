@@ -3,6 +3,6 @@ with pkgs;
 stdenv.mkDerivation {
   name = "fetch_unroll";
 
-  nativeBuildInputs = [pkgconfig];
+  nativeBuildInputs = [pkgconfig gdb];
   buildInputs = [openssl];
 }

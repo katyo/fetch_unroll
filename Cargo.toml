@@ -1,6 +1,6 @@
 [package]
 name = "fetch_unroll"
-version = "0.1.0"
+version = "0.2.0"
 description = "Simple utilities for fetching and unrolling .tar.gz archives"
 categories = ["development-tools::build-utils", "web-programming::http-client"]
 keywords = ["fetch", "unroll", "http", "tar", "gzip"]
@@ -14,17 +14,11 @@ edition = "2018"
 maintenance = { status = "passively-maintained" }
 travis-ci = { repository = "katyo/fetch_unroll" }
 
-[dependencies.http_req]
-version = "=0.5.3"
-default-features = false
+[dependencies.ureq]
+version = "0.11"
 
 [dependencies.libflate]
 version = "0.1"
 
 [dependencies.tar]
 version = "0.4"
-
-[features]
-default = ["native-tls"]
-native-tls = ["http_req/native-tls"]
-rust-tls = ["http_req/rust-tls"]
