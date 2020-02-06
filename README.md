@@ -1,4 +1,4 @@
-# Simple fetch and unroll .tag.gz archives
+# Simple fetch and unroll .tar.gz archives
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Crates.io Package](https://img.shields.io/crates/v/fetch_unroll.svg?style=popout)](https://crates.io/crates/fetch_unroll)
