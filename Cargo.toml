@@ -15,7 +15,7 @@ maintenance = { status = "passively-maintained" }
 travis-ci = { repository = "katyo/fetch_unroll" }
 
 [dependencies.http_req]
-version = "0.5"
+version = "=0.5.3"
 default-features = false
 
 [dependencies.libflate]
