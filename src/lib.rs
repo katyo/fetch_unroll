@@ -25,6 +25,13 @@ Fetch::from(pack_url)
 ```
  */
 
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    //clippy::cargo,
+)]
+
 use std::{
     path::{Path, PathBuf},
     fs::{File, remove_file, create_dir_all, remove_dir_all},
@@ -75,26 +82,28 @@ impl Display for Error {
 }
 
 impl From<&HttpError> for Error {
+    #[must_use]
     fn from(error: &HttpError) -> Self {
         use self::HttpError::*;
 
-        match error {
-            BadUrl(url) => Error::Http(format!("Invalid url: {}", url)),
-            UnknownScheme(scheme) => Error::Http(format!("Unsupported scheme: {}", scheme)),
-            DnsFailed(dns) => Error::Http(format!("Unresolved domain name: {}", dns)),
-            ConnectionFailed(error) => Error::Http(format!("Reset connection: {}", error)),
-            TooManyRedirects => Error::Http(format!("Infinite redirect loop")),
-            BadStatusRead => Error::Http(format!("Unable to read status")),
-            BadStatus => Error::Http(format!("Invalid status")),
-            BadHeader => Error::Http(format!("Unable to read headers")),
-            Io(error) => Error::Http(format!("Network error: {}", error)),
-        }
+        Self::Http(match error {
+            BadUrl(url) => format!("Invalid url: {}", url),
+            UnknownScheme(scheme) => format!("Unsupported scheme: {}", scheme),
+            DnsFailed(dns) => format!("Unresolved domain name: {}", dns),
+            ConnectionFailed(error) => format!("Reset connection: {}", error),
+            TooManyRedirects => "Infinite redirect loop".to_string(),
+            BadStatusRead => "Unable to read status".to_string(),
+            BadStatus => "Invalid status".to_string(),
+            BadHeader => "Unable to read headers".to_string(),
+            Io(error) => format!("Network error: {}", error),
+        })
     }
 }
 
 impl From<IoError> for Error {
+    #[must_use]
     fn from(error: IoError) -> Self {
-        Error::Io(error)
+        Self::Io(error)
     }
 }
 
@@ -128,6 +137,7 @@ pub struct Fetch<R> {
     source: Result<R>,
 }
 
+#[allow(clippy::use_self)]
 impl Fetch<()>
 {
     /// Fetch data from url
@@ -200,7 +210,7 @@ impl<R> From<Result<R>> for Save<R> {
     fn from(source: Result<R>) -> Self {
         Self {
             source,
-            options: Default::default(),
+            options: SaveOptions::default(),
         }
     }
 }
@@ -209,7 +219,7 @@ impl<R> Save<R> {
     /// Create destination directory when it doesn't exists
     ///
     /// Default: `true`
-    pub fn create_dest_path(mut self, flag: bool) -> Self {
+    pub const fn create_dest_path(mut self, flag: bool) -> Self {
         self.options.create_dest_path = flag;
         self
     }
@@ -217,7 +227,7 @@ impl<R> Save<R> {
     /// Overwrite existing file
     ///
     /// Default: `true`
-    pub fn force_overwrite(mut self, flag: bool) -> Self {
+    pub const fn force_overwrite(mut self, flag: bool) -> Self {
         self.options.force_overwrite = flag;
         self
     }
@@ -228,7 +238,7 @@ impl<R> Save<R> {
     /// and it is a directory, it will be removed
     ///
     /// Default: `true`
-    pub fn fix_invalid_dest(mut self, flag: bool) -> Self {
+    pub const fn fix_invalid_dest(mut self, flag: bool) -> Self {
         self.options.fix_invalid_dest = flag;
         self
     }
@@ -236,7 +246,7 @@ impl<R> Save<R> {
     /// Cleanup already written data when errors occurs
     ///
     /// Default: `true`
-    pub fn cleanup_on_error(mut self, flag: bool) -> Self {
+    pub const fn cleanup_on_error(mut self, flag: bool) -> Self {
         self.options.cleanup_on_error = flag;
         self
     }
@@ -320,7 +330,7 @@ impl<R> From<Result<R>> for Unroll<R> {
     fn from(source: Result<R>) -> Self {
         Self {
             source,
-            options: Default::default(),
+            options: UnrollOptions::default(),
         }
     }
 }
@@ -329,7 +339,7 @@ impl<R> Unroll<R> {
     /// Create destination directory when it doesn't exists
     ///
     /// Default: `true`
-    pub fn create_dest_path(mut self, flag: bool) -> Self {
+    pub const fn create_dest_path(mut self, flag: bool) -> Self {
         self.options.create_dest_path = flag;
         self
     }
@@ -337,7 +347,7 @@ impl<R> Unroll<R> {
     /// Cleanup destination directory before extraction
     ///
     /// Default: `true`
-    pub fn cleanup_dest_dir(mut self, flag: bool) -> Self {
+    pub const fn cleanup_dest_dir(mut self, flag: bool) -> Self {
         self.options.cleanup_dest_dir = flag;
         self
     }
@@ -348,7 +358,7 @@ impl<R> Unroll<R> {
     /// and it is not a directory, it will be removed
     ///
     /// Default: `true`
-    pub fn fix_invalid_dest(mut self, flag: bool) -> Self {
+    pub const fn fix_invalid_dest(mut self, flag: bool) -> Self {
         self.options.fix_invalid_dest = flag;
         self
     }
@@ -356,7 +366,7 @@ impl<R> Unroll<R> {
     /// Cleanup already extracted data when errors occurs
     ///
     /// Default: `true`
-    pub fn cleanup_on_error(mut self, flag: bool) -> Self {
+    pub const fn cleanup_on_error(mut self, flag: bool) -> Self {
         self.options.cleanup_on_error = flag;
         self
     }
@@ -364,7 +374,7 @@ impl<R> Unroll<R> {
     /// Strip the number of leading components from file names on extraction
     ///
     /// Default: `0`
-    pub fn strip_components(mut self, num_of_components: usize) -> Self {
+    pub const fn strip_components(mut self, num_of_components: usize) -> Self {
         self.options.strip_components = num_of_components;
         self
     }
@@ -372,7 +382,7 @@ impl<R> Unroll<R> {
     /// Strip the leading components only when it's alone
     ///
     /// Default: `false`
-    pub fn strip_when_alone(mut self, flag: bool) -> Self {
+    pub const fn strip_when_alone(mut self, flag: bool) -> Self {
         self.options.strip_when_alone = flag;
         self
     }
@@ -439,17 +449,17 @@ where
         archive.unpack(destin)?;
         Ok(())
     } else {
-        let mut decoded = Vec::new();
-        decoder.read_to_end(&mut decoded)?;
+        let mut decoded_data = Vec::new();
+        decoder.read_to_end(&mut decoded_data)?;
 
         let strip_components = if options.strip_when_alone {
-            let mut archive = TarArchive::new(Cursor::new(&decoded));
+            let mut archive = TarArchive::new(Cursor::new(&decoded_data));
             options.strip_components.min(count_common_components(&mut archive)?)
         } else {
             options.strip_components
         };
 
-        let mut archive = TarArchive::new(Cursor::new(decoded));
+        let mut archive = TarArchive::new(Cursor::new(decoded_data));
         let entries = archive.entries()?;
 
         for entry in entries {
