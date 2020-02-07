@@ -10,23 +10,24 @@ Simple functions intended to use in __Rust__ `build.rs` scripts for tasks which 
 ## Usage example
 
 ```rust
-use fetch_unroll::fetch_unroll;
+use fetch_unroll::Fetch;
 
 let pack_url = format!(
-    "{base}/{user}/{repo}/releases/download/{ver}/{pkg}_{prof}.tar.gz",
+    concat!("{base}/{user}/{repo}/releases/download/",
+            "{package}-{version}/{package}_{target}_{profile}.tar.gz"),
     base = "https://github.com",
     user = "katyo",
-    repo = "oboe-rs",
-    pkg = "liboboe-ext",
-    ver = "0.1.0",
-    prof = "release",
+    repo = "aubio-rs",
+    package = "libaubio",
+    version = "0.5.0-alpha",
+    target = "armv7-linux-androideabi",
+    profile = "debug",
 );
 
 let dest_dir = "target/test_download";
 
-// Creating destination directory
-std::fs::create_dir_all(dest_dir).unwrap();
-
 // Fetching and unrolling archive
-fetch_unroll(pack_url, dest_dir).unwrap();
+Fetch::from(pack_url)
+    .unroll().strip_components(1).to(dest_dir)
+    .unwrap();
 ```

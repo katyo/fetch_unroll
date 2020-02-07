@@ -1,6 +1,6 @@
 [package]
 name = "fetch_unroll"
-version = "0.2.0"
+version = "0.2.1"
 description = "Simple utilities for fetching and unrolling .tar.gz archives"
 categories = ["development-tools::build-utils", "web-programming::http-client"]
 keywords = ["fetch", "unroll", "http", "tar", "gzip"]
