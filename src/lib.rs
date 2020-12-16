@@ -92,10 +92,13 @@ impl From<&HttpError> for Error {
             DnsFailed(dns) => format!("Unresolved domain name: {}", dns),
             ConnectionFailed(error) => format!("Reset connection: {}", error),
             TooManyRedirects => "Infinite redirect loop".to_string(),
-            BadStatusRead => "Unable to read status".to_string(),
             BadStatus => "Invalid status".to_string(),
             BadHeader => "Unable to read headers".to_string(),
             Io(error) => format!("Network error: {}", error),
+            BadProxy => "Bad proxy".to_string(),
+            ProxyConnect => "Proxy connection error".to_string(),
+            BadProxyCreds => "Bad proxy creds".to_string(),
+            InvalidProxyCreds => "Invalid proxy creds".to_string(),
         })
     }
 }
