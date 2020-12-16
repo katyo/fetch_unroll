@@ -14,11 +14,7 @@ edition = "2018"
 maintenance = { status = "passively-maintained" }
 travis-ci = { repository = "katyo/fetch_unroll" }
 
-[dependencies.ureq]
-version = "0.11"
-
-[dependencies.libflate]
-version = "0.1"
-
-[dependencies.tar]
-version = "0.4"
+[dependencies]
+ureq = "1.5"
+libflate = "1.0"
+tar = "0.4"
