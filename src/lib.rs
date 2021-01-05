@@ -84,21 +84,14 @@ impl Display for Error {
 impl From<&HttpError> for Error {
     #[must_use]
     fn from(error: &HttpError) -> Self {
-        use self::HttpError::*;
-
+        // Map the error to our error type.
         Self::Http(match error {
-            BadUrl(url) => format!("Invalid url: {}", url),
-            UnknownScheme(scheme) => format!("Unsupported scheme: {}", scheme),
-            DnsFailed(dns) => format!("Unresolved domain name: {}", dns),
-            ConnectionFailed(error) => format!("Reset connection: {}", error),
-            TooManyRedirects => "Infinite redirect loop".to_string(),
-            BadStatus => "Invalid status".to_string(),
-            BadHeader => "Unable to read headers".to_string(),
-            Io(error) => format!("Network error: {}", error),
-            BadProxy => "Bad proxy".to_string(),
-            ProxyConnect => "Proxy connection error".to_string(),
-            BadProxyCreds => "Bad proxy creds".to_string(),
-            InvalidProxyCreds => "Invalid proxy creds".to_string(),
+            HttpError::Status(code, _) => {
+                format!("Invalid status: {}", code)
+            }
+            HttpError::Transport(transport) => {
+                format!("Transport error: {}", transport)
+            }
         })
     }
 }
@@ -153,21 +146,15 @@ impl Fetch<()>
 }
 
 fn http_fetch(url: &str) -> Result<impl Read> {
-    let response = http_get(url).call();
-
-    if response.status() == 403 {
-        return Err(Error::Http(format!("Denied: {}", url)));
+    match http_get(url).call() {
+        Ok(response) => {
+            Ok(response.into_reader())
+        }
+        Err(error) => {
+            // Map the error to our error type.
+            Err(Error::from(&error))
+        }
     }
-
-    if response.status() == 404 {
-        return Err(Error::Http(format!("Not found: {}", url)));
-    }
-
-    if let Some(error) = response.synthetic_error() {
-        return Err(Error::from(error));
-    }
-
-    Ok(response.into_reader())
 }
 
 impl<R> Fetch<R>
