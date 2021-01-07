@@ -67,13 +67,12 @@ impl StdError for Error {}
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {
-        use self::Error::*;
         match self {
-            Http(error) => {
+            Self::Http(error) => {
                 "Http error: ".fmt(f)?;
                 error.fmt(f)
             }
-            Io(error) => {
+            Self::Io(error) => {
                 "IO error: ".fmt(f)?;
                 error.fmt(f)
             }
@@ -243,6 +242,11 @@ impl<R> Save<R> {
 
 impl<R> Save<R> {
     /// Save file to specified path
+    ///
+    /// # Errors
+    /// - Destination directory does not exists when `create_dest_path` is not set
+    /// - File already exist at destination directory when `force_overwrite` is not set
+    /// - Destination path is not a file when `fix_invalid_dest` is not set
     pub fn to<D>(self, path: D) -> Status
     where
         R: Read,
@@ -380,6 +384,12 @@ impl<R> Unroll<R> {
 
 impl<R> Unroll<R> {
     /// Extract contents to specified directory
+    ///
+    /// # Errors
+    /// - Destination directory does not exists when `create_dest_path` is not set
+    /// - Destination directory is not empty when `cleanup_dest_dir` is not set
+    /// - Destination path is not a directory when `fix_invalid_dest` is not set
+    /// - Required number of path components cannot be stripped  when `strip_when_alone` is not set
     pub fn to<D>(self, path: D) -> Status
     where
         R: Read,
@@ -455,8 +465,6 @@ where
         let entries = archive.entries()?;
 
         for entry in entries {
-            use self::TarEntryType::*;
-
             let mut entry = entry?;
             let type_ = entry.header().entry_type();
 
@@ -464,7 +472,7 @@ where
                 let entry_path = entry.path()?;
 
                 match type_ {
-                    Directory => {
+                    TarEntryType::Directory => {
                         let stripped_path = entry_path
                             .iter()
                             .skip(strip_components)
@@ -477,7 +485,7 @@ where
                         //create_dir_all(dest_path);
                         entry.unpack(dest_path)?;
                     }
-                    Regular => {
+                    TarEntryType::Regular => {
                         let strip_components = strip_components.min(entry_path.iter().count() - 1);
                         let stripped_path = entry_path
                             .iter()
@@ -503,13 +511,11 @@ where
     let mut common_ancestor = None;
 
     for entry in archive.entries()? {
-        use self::TarEntryType::*;
-
         let entry = entry?;
         let entry_path = entry.path()?;
 
         match entry.header().entry_type() {
-            Directory | Regular => {
+            TarEntryType::Directory | TarEntryType::Regular => {
                 if common_ancestor.is_none() {
                     common_ancestor = Some(entry_path.to_path_buf());
                 } else {
@@ -529,11 +535,7 @@ where
         }
     }
 
-    Ok(if let Some(path) = common_ancestor {
-        path.iter().count()
-    } else {
-        0
-    })
+    Ok(common_ancestor.map_or(0, |path| path.iter().count()))
 }
 
 fn remove_dir_entries(path: &Path) -> StdResult<(), IoError> {
