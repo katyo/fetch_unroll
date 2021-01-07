@@ -102,29 +102,6 @@ impl From<IoError> for Error {
     }
 }
 
-/// Fetch archive from HTTP(S) server and unroll to local directory
-#[deprecated]
-#[allow(deprecated)]
-pub fn fetch_unroll<U: AsRef<str>, D: AsRef<Path>>(href: U, path: D) -> Status {
-    unroll(fetch(href)?, path)
-}
-
-/// Fetch contents from HTTP(S) server and return a reader on success
-#[deprecated]
-pub fn fetch<U: AsRef<str>>(href: U) -> Result<impl Read> {
-    http_fetch(href.as_ref())
-}
-
-/// Unroll packed data
-///
-/// *NOTE*: Currently supported __.tar.gz__ archives only.
-#[deprecated]
-pub fn unroll<S: Read, D: AsRef<Path>>(pack: S, path: D) -> Status {
-    let unpacker = GzipDecoder::new(pack)?;
-    let mut extractor = TarArchive::new(unpacker);
-
-    extractor.unpack(path)?;
-    Ok(())
 type Flag = u8;
 
 const CREATE_DEST_PATH: Flag = 1 << 0;
@@ -567,28 +544,6 @@ fn remove_dir_entries(path: &Path) -> StdResult<(), IoError> {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn github_archive() {
-        let src_url = format!(
-            "{base}/{user}/{repo}/archive/{ver}.tar.gz",
-            base = "https://github.com",
-            user = "katyo",
-            repo = "fluidlite",
-            ver = "1.2.0",
-        );
-
-        let dst_dir = "target/test_archive";
-
-        // Creating destination directory
-        std::fs::create_dir_all(dst_dir).unwrap();
-
-        // Fetching and unrolling archive
-        #[allow(deprecated)]
-        fetch_unroll(src_url, dst_dir).unwrap();
-
-        //std::fs::remove_dir_all(dst_dir).unwrap();
-    }
 
     #[test]
     fn github_archive_new() {
