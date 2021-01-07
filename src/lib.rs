@@ -33,17 +33,17 @@ Fetch::from(pack_url)
 )]
 
 use std::{
-    path::{Path, PathBuf},
-    fs::{File, remove_file, create_dir_all, remove_dir_all},
-    io::{Error as IoError, Read, Cursor, copy},
-    error::{Error as StdError},
-    result::{Result as StdResult},
+    error::Error as StdError,
     fmt::{Display, Formatter, Result as FmtResult},
+    fs::{create_dir_all, remove_dir_all, remove_file, File},
+    io::{copy, Cursor, Error as IoError, Read},
+    path::{Path, PathBuf},
+    result::Result as StdResult,
 };
 
-use ureq::{Error as HttpError, get as http_get};
-use libflate::gzip::{Decoder as GzipDecoder};
+use libflate::gzip::Decoder as GzipDecoder;
 use tar::{Archive as TarArchive, EntryType as TarEntryType};
+use ureq::{get as http_get, Error as HttpError};
 
 /// Result type
 pub type Result<T> = StdResult<T, Error>;
@@ -72,11 +72,11 @@ impl Display for Error {
             Http(error) => {
                 "Http error: ".fmt(f)?;
                 error.fmt(f)
-            },
+            }
             Io(error) => {
                 "IO error: ".fmt(f)?;
                 error.fmt(f)
-            },
+            }
         }
     }
 }
@@ -134,22 +134,21 @@ pub struct Fetch<R> {
 }
 
 #[allow(clippy::use_self)]
-impl Fetch<()>
-{
+impl Fetch<()> {
     /// Fetch data from url
     pub fn from<U>(url: U) -> Fetch<impl Read>
     where
         U: AsRef<str>,
     {
-        Fetch { source: http_fetch(url.as_ref()) }
+        Fetch {
+            source: http_fetch(url.as_ref()),
+        }
     }
 }
 
 fn http_fetch(url: &str) -> Result<impl Read> {
     match http_get(url).call() {
-        Ok(response) => {
-            Ok(response.into_reader())
-        }
+        Ok(response) => Ok(response.into_reader()),
         Err(error) => {
             // Map the error to our error type.
             Err(Error::from(&error))
@@ -159,7 +158,7 @@ fn http_fetch(url: &str) -> Result<impl Read> {
 
 impl<R> Fetch<R>
 where
-    R: Read
+    R: Read,
 {
     /// Write fetched data to file
     pub fn save(self) -> Save<impl Read> {
@@ -265,7 +264,8 @@ impl<R> Save<R> {
             if options.fix_invalid_dest {
                 remove_dir_all(path)?;
             }
-        } else { // not exists
+        } else {
+            // not exists
             if options.create_dest_path {
                 if let Some(path) = path.parent() {
                     create_dir_all(path)?;
@@ -408,23 +408,23 @@ impl<R> Unroll<R> {
                     create_dir_all(path)?;
                 }
             }
-        } else { // not exists
+        } else {
+            // not exists
             if options.create_dest_path {
                 create_dir_all(path)?;
             }
         }
 
-        unroll_archive_to(source, &options, path)
-            .or_else(|error| {
-                if options.cleanup_on_error && path.is_dir() {
-                    if dest_already_exists {
-                        remove_dir_entries(path)?;
-                    } else {
-                        remove_dir_all(path)?;
-                    }
+        unroll_archive_to(source, &options, path).or_else(|error| {
+            if options.cleanup_on_error && path.is_dir() {
+                if dest_already_exists {
+                    remove_dir_entries(path)?;
+                } else {
+                    remove_dir_all(path)?;
                 }
-                Err(error)
-            })
+            }
+            Err(error)
+        })
     }
 }
 
@@ -444,7 +444,9 @@ where
 
         let strip_components = if options.strip_when_alone {
             let mut archive = TarArchive::new(Cursor::new(&decoded_data));
-            options.strip_components.min(count_common_components(&mut archive)?)
+            options
+                .strip_components
+                .min(count_common_components(&mut archive)?)
         } else {
             options.strip_components
         };
@@ -463,7 +465,10 @@ where
 
                 match type_ {
                     Directory => {
-                        let stripped_path = entry_path.iter().skip(strip_components).collect::<PathBuf>();
+                        let stripped_path = entry_path
+                            .iter()
+                            .skip(strip_components)
+                            .collect::<PathBuf>();
                         if stripped_path.iter().count() < 1 {
                             continue;
                         }
@@ -471,14 +476,17 @@ where
 
                         //create_dir_all(dest_path);
                         entry.unpack(dest_path)?;
-                    },
+                    }
                     Regular => {
                         let strip_components = strip_components.min(entry_path.iter().count() - 1);
-                        let stripped_path = entry_path.iter().skip(strip_components).collect::<PathBuf>();
+                        let stripped_path = entry_path
+                            .iter()
+                            .skip(strip_components)
+                            .collect::<PathBuf>();
                         let dest_path = destin.join(stripped_path);
 
                         entry.unpack(dest_path)?;
-                    },
+                    }
                     _ => println!("other: {:?}", entry_path),
                 }
             }
@@ -507,12 +515,16 @@ where
                 } else {
                     let common_ancestor = common_ancestor.as_mut().unwrap();
 
-                    *common_ancestor = common_ancestor.iter().zip(entry_path.iter())
+                    *common_ancestor = common_ancestor
+                        .iter()
+                        .zip(entry_path.iter())
                         .take_while(|(common_component, entry_component)| {
                             common_component == entry_component
-                        }).map(|(common_component, _)| common_component).collect();
+                        })
+                        .map(|(common_component, _)| common_component)
+                        .collect();
                 }
-            },
+            }
             _ => (),
         }
     }
@@ -575,7 +587,8 @@ mod test {
         let dst_dir = "target/test_archive_new";
 
         // Fetching and unrolling archive (new way)
-        Fetch::from(src_url).unroll()
+        Fetch::from(src_url)
+            .unroll()
             .strip_components(1)
             .strip_when_alone(true)
             .to(dst_dir)
