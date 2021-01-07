@@ -125,6 +125,34 @@ pub fn unroll<S: Read, D: AsRef<Path>>(pack: S, path: D) -> Status {
 
     extractor.unpack(path)?;
     Ok(())
+type Flag = u8;
+
+const CREATE_DEST_PATH: Flag = 1 << 0;
+const FORCE_OVERWRITE: Flag = 1 << 1;
+const FIX_INVALID_DEST: Flag = 1 << 2;
+const CLEANUP_ON_ERROR: Flag = 1 << 3;
+const CLEANUP_DEST_DIR: Flag = 1 << 4;
+const STRIP_WHEN_ALONE: Flag = 1 << 5;
+
+const DEFAULT_SAVE_FLAGS: Flag =
+    CREATE_DEST_PATH | FORCE_OVERWRITE | FIX_INVALID_DEST | CLEANUP_ON_ERROR;
+const DEFAULT_UNROLL_FLAGS: Flag =
+    CREATE_DEST_PATH | FIX_INVALID_DEST | CLEANUP_ON_ERROR | CLEANUP_DEST_DIR;
+
+macro_rules! flag {
+    // Get flag
+    ($($var:ident).* [$key:ident]) => {
+        ($($var).* & $key) == $key
+    };
+
+    // Set flag
+    ($($var:ident).* [$key:ident] = $val:expr) => {
+        if $val {
+            $($var).* |= $key;
+        } else {
+            $($var).* &= !$key;
+        }
+    };
 }
 
 /// HTTP(S) fetcher
@@ -177,19 +205,13 @@ pub struct Save<R> {
 }
 
 struct SaveOptions {
-    create_dest_path: bool,
-    force_overwrite: bool,
-    fix_invalid_dest: bool,
-    cleanup_on_error: bool,
+    flags: Flag,
 }
 
 impl Default for SaveOptions {
     fn default() -> Self {
         Self {
-            create_dest_path: true,
-            force_overwrite: true,
-            fix_invalid_dest: true,
-            cleanup_on_error: true,
+            flags: DEFAULT_SAVE_FLAGS,
         }
     }
 }
@@ -208,7 +230,7 @@ impl<R> Save<R> {
     ///
     /// Default: `true`
     pub const fn create_dest_path(mut self, flag: bool) -> Self {
-        self.options.create_dest_path = flag;
+        flag! { self.options.flags[CREATE_DEST_PATH] = flag }
         self
     }
 
@@ -216,7 +238,7 @@ impl<R> Save<R> {
     ///
     /// Default: `true`
     pub const fn force_overwrite(mut self, flag: bool) -> Self {
-        self.options.force_overwrite = flag;
+        flag! { self.options.flags[FORCE_OVERWRITE] = flag }
         self
     }
 
@@ -227,7 +249,7 @@ impl<R> Save<R> {
     ///
     /// Default: `true`
     pub const fn fix_invalid_dest(mut self, flag: bool) -> Self {
-        self.options.fix_invalid_dest = flag;
+        flag! { self.options.flags[FIX_INVALID_DEST] = flag }
         self
     }
 
@@ -235,7 +257,7 @@ impl<R> Save<R> {
     ///
     /// Default: `true`
     pub const fn cleanup_on_error(mut self, flag: bool) -> Self {
-        self.options.cleanup_on_error = flag;
+        flag! { self.options.flags[CLEANUP_ON_ERROR] = flag }
         self
     }
 }
@@ -259,18 +281,18 @@ impl<R> Save<R> {
         let path = path.as_ref();
 
         if path.is_file() {
-            if options.force_overwrite {
+            if flag!(options.flags[FORCE_OVERWRITE]) {
                 remove_file(path)?;
             } else {
                 return Ok(());
             }
         } else if path.is_dir() {
-            if options.fix_invalid_dest {
+            if flag!(options.flags[FIX_INVALID_DEST]) {
                 remove_dir_all(path)?;
             }
         } else {
             // not exists
-            if options.create_dest_path {
+            if flag!(options.flags[CREATE_DEST_PATH]) {
                 if let Some(path) = path.parent() {
                     create_dir_all(path)?;
                 }
@@ -280,7 +302,7 @@ impl<R> Save<R> {
         copy(&mut source, &mut File::create(path)?)
             .map(|_| ())
             .or_else(|error| {
-                if options.cleanup_on_error && path.is_file() {
+                if flag!(options.flags[CLEANUP_ON_ERROR]) && path.is_file() {
                     remove_file(path)?;
                 }
                 Err(error)
@@ -299,23 +321,15 @@ pub struct Unroll<R> {
 }
 
 struct UnrollOptions {
-    create_dest_path: bool,
-    cleanup_dest_dir: bool,
-    fix_invalid_dest: bool,
-    cleanup_on_error: bool,
     strip_components: usize,
-    strip_when_alone: bool,
+    flags: Flag,
 }
 
 impl Default for UnrollOptions {
     fn default() -> Self {
         Self {
-            create_dest_path: true,
-            cleanup_dest_dir: true,
-            fix_invalid_dest: true,
-            cleanup_on_error: true,
             strip_components: 0,
-            strip_when_alone: false,
+            flags: DEFAULT_UNROLL_FLAGS,
         }
     }
 }
@@ -334,7 +348,7 @@ impl<R> Unroll<R> {
     ///
     /// Default: `true`
     pub const fn create_dest_path(mut self, flag: bool) -> Self {
-        self.options.create_dest_path = flag;
+        flag! { self.options.flags[CREATE_DEST_PATH] = flag }
         self
     }
 
@@ -342,7 +356,7 @@ impl<R> Unroll<R> {
     ///
     /// Default: `true`
     pub const fn cleanup_dest_dir(mut self, flag: bool) -> Self {
-        self.options.cleanup_dest_dir = flag;
+        flag! { self.options.flags[CLEANUP_DEST_DIR] = flag }
         self
     }
 
@@ -353,7 +367,7 @@ impl<R> Unroll<R> {
     ///
     /// Default: `true`
     pub const fn fix_invalid_dest(mut self, flag: bool) -> Self {
-        self.options.fix_invalid_dest = flag;
+        flag! { self.options.flags[FIX_INVALID_DEST] = flag }
         self
     }
 
@@ -361,7 +375,7 @@ impl<R> Unroll<R> {
     ///
     /// Default: `true`
     pub const fn cleanup_on_error(mut self, flag: bool) -> Self {
-        self.options.cleanup_on_error = flag;
+        flag! { self.options.flags[CLEANUP_ON_ERROR] = flag }
         self
     }
 
@@ -377,7 +391,7 @@ impl<R> Unroll<R> {
     ///
     /// Default: `false`
     pub const fn strip_when_alone(mut self, flag: bool) -> Self {
-        self.options.strip_when_alone = flag;
+        flag! { self.options.flags[STRIP_WHEN_ALONE] = flag }
         self
     }
 }
@@ -405,28 +419,28 @@ impl<R> Unroll<R> {
         if path.is_dir() {
             dest_already_exists = true;
 
-            if options.cleanup_dest_dir {
+            if flag!(options.flags[CLEANUP_DEST_DIR]) {
                 remove_dir_entries(path)?;
             }
         } else if path.is_file() {
             //dest_already_exists = true;
 
-            if options.fix_invalid_dest {
+            if flag!(options.flags[FIX_INVALID_DEST]) {
                 remove_file(path)?;
 
-                if options.create_dest_path {
+                if flag!(options.flags[CREATE_DEST_PATH]) {
                     create_dir_all(path)?;
                 }
             }
         } else {
             // not exists
-            if options.create_dest_path {
+            if flag!(options.flags[CREATE_DEST_PATH]) {
                 create_dir_all(path)?;
             }
         }
 
         unroll_archive_to(source, &options, path).or_else(|error| {
-            if options.cleanup_on_error && path.is_dir() {
+            if flag!(options.flags[CLEANUP_ON_ERROR]) && path.is_dir() {
                 if dest_already_exists {
                     remove_dir_entries(path)?;
                 } else {
@@ -452,7 +466,7 @@ where
         let mut decoded_data = Vec::new();
         decoder.read_to_end(&mut decoded_data)?;
 
-        let strip_components = if options.strip_when_alone {
+        let strip_components = if flag!(options.flags[STRIP_WHEN_ALONE]) {
             let mut archive = TarArchive::new(Cursor::new(&decoded_data));
             options
                 .strip_components
